@@ -29,6 +29,8 @@ contract IncreasingTreasuryReimbursement is GebMath {
     uint256 public baseUpdateCallerReward;          // [wad]
     // Max possible reward for the fee receiver/keeper
     uint256 public maxUpdateCallerReward;           // [wad]
+    // Max delay taken into consideration when calculating the adjusted reward
+    uint256 public maxRewardIncreaseDelay;          // [seconds]
     // Rate applied to baseUpdateCallerReward every extra second passed beyond a certain point (e.g next time when a specific function needs to be called)
     uint256 public perSecondCallerRewardIncrease;   // [ray]
 
@@ -65,6 +67,7 @@ contract IncreasingTreasuryReimbursement is GebMath {
         baseUpdateCallerReward          = baseUpdateCallerReward_;
         maxUpdateCallerReward           = maxUpdateCallerReward_;
         perSecondCallerRewardIncrease   = perSecondCallerRewardIncrease_;
+        maxRewardIncreaseDelay          = uint(-1);
 
         emit AddAuthorization(msg.sender);
         emit ModifyParameters("treasury", treasury_);
@@ -90,11 +93,15 @@ contract IncreasingTreasuryReimbursement is GebMath {
         if (timeElapsed < defaultDelayBetweenCalls) {
             return 0;
         }
-        uint256 calculatedReward = baseUpdateCallerReward;
-        if (subtract(timeElapsed, defaultDelayBetweenCalls) > 0) {
-            calculatedReward = rmultiply(rpower(perSecondCallerRewardIncrease, subtract(timeElapsed, defaultDelayBetweenCalls), RAY), calculatedReward);
-        }
+        uint256 adjustedTime      = subtract(timeElapsed, defaultDelayBetweenCalls);
         uint256 maxPossibleReward = minimum(maxUpdateCallerReward, treasuryAllowance() / RAY);
+        if (adjustedTime > maxRewardIncreaseDelay) {
+            return maxPossibleReward;
+        }
+        uint256 calculatedReward = baseUpdateCallerReward;
+        if (adjustedTime > 0) {
+            calculatedReward = rmultiply(rpower(perSecondCallerRewardIncrease, adjustedTime, RAY), calculatedReward);
+        }
         if (calculatedReward > maxPossibleReward) {
             calculatedReward = maxPossibleReward;
         }
