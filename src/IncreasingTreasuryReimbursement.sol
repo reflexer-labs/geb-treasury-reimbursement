@@ -76,6 +76,11 @@ contract IncreasingTreasuryReimbursement is GebMath {
         emit ModifyParameters("perSecondCallerRewardIncrease", perSecondCallerRewardIncrease);
     }
 
+    // --- Boolean Logic ---
+    function either(bool x, bool y) internal pure returns (bool z) {
+        assembly{ z := or(x, y)}
+    }
+
     // --- Treasury ---
     /**
     * @notice This returns the stability fee treasury allowance for this contract by taking the minimum between the per block and the total allowances
@@ -114,7 +119,7 @@ contract IncreasingTreasuryReimbursement is GebMath {
     **/
     function rewardCaller(address proposedFeeReceiver, uint256 reward) internal {
         if (address(treasury) == proposedFeeReceiver) return;
-        if (address(treasury) == address(0) || reward == 0) return;
+        if (either(address(treasury) == address(0), reward == 0)) return;
         address finalFeeReceiver = (proposedFeeReceiver == address(0)) ? msg.sender : proposedFeeReceiver;
         try treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), reward) {}
         catch(bytes memory revertReason) {
