@@ -90,7 +90,7 @@ contract IncreasingTreasuryReimbursement is GebMath {
     function getCallerReward(uint256 timeOfLastUpdate, uint256 defaultDelayBetweenCalls) public view returns (uint256) {
         if (timeOfLastUpdate >= now) return 0;
         uint256 timeElapsed = (timeOfLastUpdate == 0) ? defaultDelayBetweenCalls : subtract(now, timeOfLastUpdate);
-        if (timeElapsed < defaultDelayBetweenCalls) {
+        if (either(timeElapsed < defaultDelayBetweenCalls, baseUpdateCallerReward == 0)) {
             return 0;
         }
         uint256 adjustedTime      = subtract(timeElapsed, defaultDelayBetweenCalls);
