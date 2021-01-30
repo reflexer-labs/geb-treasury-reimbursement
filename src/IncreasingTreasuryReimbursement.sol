@@ -93,7 +93,8 @@ contract IncreasingTreasuryReimbursement is GebMath {
     * @notice Get the SF reward that can be sent to a function caller right now
     */
     function getCallerReward(uint256 timeOfLastUpdate, uint256 defaultDelayBetweenCalls) public view returns (uint256) {
-        if (timeOfLastUpdate >= now) return 0;
+        bool nullRewards = (baseUpdateCallerReward == 0 && maxUpdateCallerReward == 0);
+        if (either(timeOfLastUpdate >= now, nullRewards)) return 0;
         uint256 timeElapsed = (timeOfLastUpdate == 0) ? defaultDelayBetweenCalls : subtract(now, timeOfLastUpdate);
         if (either(timeElapsed < defaultDelayBetweenCalls, baseUpdateCallerReward == 0)) {
             return 0;
