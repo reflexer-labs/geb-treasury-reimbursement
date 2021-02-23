@@ -36,6 +36,7 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
     }
 
     // --- Variables ---
+    // The fixed reward sent by the treasury to a fee receiver
     uint256 public fixedReward;
     // SF treasury
     StabilityFeeTreasuryLike public treasury;
@@ -73,18 +74,31 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
     }
 
     // --- Treasury Utils ---
+    /*
+    * @notify Return the amount of SF that the treasury can transfer in one transaction when called by this contract
+    */
     function treasuryAllowance() public view returns (uint256) {
         (uint total, uint perBlock) = treasury.getAllowance(address(this));
         return minimum(total, perBlock);
     }
+    /*
+    * @notify Get the actual reward to be sent by taking the minimum between the fixed reward and the amount that can be sent by the treasury
+    */
     function getCallerReward() public view returns (uint256 reward) {
         reward = minimum(fixedReward, treasuryAllowance() / RAY);
     }
+    /*
+    * @notice Send a SF reward to a fee receiver by calling the treasury
+    */
     function rewardCaller(address proposedFeeReceiver) internal {
+        // If the receiver is the treasury itself or if the treasury is null or if the reward is zero, revert
         require(address(treasury) != proposedFeeReceiver, "MandatoryFixedTreasuryReimbursement/reward-receiver-cannot-be-treasury");
         require(both(address(treasury) != address(0), fixedReward > 0), "MandatoryFixedTreasuryReimbursement/invalid-treasury-or-reward");
+
+        // Determine the actual fee receiver and reward them
         address finalFeeReceiver = (proposedFeeReceiver == address(0)) ? msg.sender : proposedFeeReceiver;
         treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), fixedReward);
+
         emit RewardCaller(finalFeeReceiver, fixedReward);
     }
 }

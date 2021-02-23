@@ -11,14 +11,25 @@ abstract contract StabilityFeeTreasuryLike {
 contract IncreasingTreasuryReimbursement is GebMath {
     // --- Auth ---
     mapping (address => uint) public authorizedAccounts;
+    /**
+     * @notice Add auth to an account
+     * @param account Account to add auth to
+     */
     function addAuthorization(address account) virtual external isAuthorized {
         authorizedAccounts[account] = 1;
         emit AddAuthorization(account);
     }
+    /**
+     * @notice Remove auth from an account
+     * @param account Account to remove auth from
+     */
     function removeAuthorization(address account) virtual external isAuthorized {
         authorizedAccounts[account] = 0;
         emit RemoveAuthorization(account);
     }
+    /**
+    * @notice Checks whether msg.sender can call an authed function
+    **/
     modifier isAuthorized {
         require(authorizedAccounts[msg.sender] == 1, "IncreasingTreasuryReimbursement/account-not-authorized");
         _;
@@ -93,21 +104,30 @@ contract IncreasingTreasuryReimbursement is GebMath {
     * @notice Get the SF reward that can be sent to a function caller right now
     */
     function getCallerReward(uint256 timeOfLastUpdate, uint256 defaultDelayBetweenCalls) public view returns (uint256) {
+        // If the rewards are null or if the time of the last update is in the future, return 0
         bool nullRewards = (baseUpdateCallerReward == 0 && maxUpdateCallerReward == 0);
         if (either(timeOfLastUpdate >= now, nullRewards)) return 0;
+
+        // If the time elapsed is smaller than defaultDelayBetweenCalls or if the base reward is zero, return 0
         uint256 timeElapsed = (timeOfLastUpdate == 0) ? defaultDelayBetweenCalls : subtract(now, timeOfLastUpdate);
         if (either(timeElapsed < defaultDelayBetweenCalls, baseUpdateCallerReward == 0)) {
             return 0;
         }
+
+        // If too much time elapsed, return the max reward
         uint256 adjustedTime      = subtract(timeElapsed, defaultDelayBetweenCalls);
         uint256 maxPossibleReward = minimum(maxUpdateCallerReward, treasuryAllowance() / RAY);
         if (adjustedTime > maxRewardIncreaseDelay) {
             return maxPossibleReward;
         }
+
+        // Calculate the reward
         uint256 calculatedReward = baseUpdateCallerReward;
         if (adjustedTime > 0) {
             calculatedReward = rmultiply(rpower(perSecondCallerRewardIncrease, adjustedTime, RAY), calculatedReward);
         }
+
+        // If the reward is higher than max, set it to max
         if (calculatedReward > maxPossibleReward) {
             calculatedReward = maxPossibleReward;
         }
@@ -119,8 +139,11 @@ contract IncreasingTreasuryReimbursement is GebMath {
     * @param reward The system coin amount to send
     **/
     function rewardCaller(address proposedFeeReceiver, uint256 reward) internal {
+        // If the receiver is the treasury itself or if the treasury is null or if the reward is zero, return
         if (address(treasury) == proposedFeeReceiver) return;
         if (either(address(treasury) == address(0), reward == 0)) return;
+
+        // Determine the actual receiver and send funds
         address finalFeeReceiver = (proposedFeeReceiver == address(0)) ? msg.sender : proposedFeeReceiver;
         try treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), reward) {}
         catch(bytes memory revertReason) {
