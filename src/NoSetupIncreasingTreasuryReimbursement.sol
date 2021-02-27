@@ -86,6 +86,8 @@ contract NoSetupIncreasingTreasuryReimbursement is GebMath {
     }
     /*
     * @notice Get the SF reward that can be sent to a function caller right now
+    * @param timeOfLastUpdate The last time when the function that the treasury pays for has been updated
+    * @param defaultDelayBetweenCalls Enforced delay between calls to the function for which the treasury reimburses callers
     */
     function getCallerReward(uint256 timeOfLastUpdate, uint256 defaultDelayBetweenCalls) public view returns (uint256) {
         // If the rewards are null or if the time of the last update is in the future, return 0

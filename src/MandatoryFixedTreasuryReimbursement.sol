@@ -37,7 +37,7 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
 
     // --- Variables ---
     // The fixed reward sent by the treasury to a fee receiver
-    uint256 public fixedReward;
+    uint256 public fixedReward; // [wad]
     // SF treasury
     StabilityFeeTreasuryLike public treasury;
 
@@ -89,6 +89,7 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
     }
     /*
     * @notice Send a SF reward to a fee receiver by calling the treasury
+    * @param proposedFeeReceiver The address that will receive the reward (unless null in which case msg.sender will receive it)
     */
     function rewardCaller(address proposedFeeReceiver) internal {
         // If the receiver is the treasury itself or if the treasury is null or if the reward is zero, revert
