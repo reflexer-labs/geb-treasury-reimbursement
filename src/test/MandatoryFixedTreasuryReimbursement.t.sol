@@ -28,7 +28,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
 
     Pinger pinger;
     MockTreasury treasury;
-    DSToken rai;
+    DSToken coin;
 
     address alice = address(0x4567);
     address me;
@@ -42,12 +42,12 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
         hevm.warp(startTime);
 
         // Create token
-        rai = new DSToken("RAI", "RAI");
-        rai.mint(initTokenAmount);
+        coin = new DSToken("RAI", "RAI");
+        coin.mint(initTokenAmount);
 
         // Create treasury
-        treasury = new MockTreasury(address(rai));
-        rai.transfer(address(treasury), initTokenAmount);
+        treasury = new MockTreasury(address(coin));
+        coin.transfer(address(treasury), initTokenAmount);
 
         pinger = new Pinger(address(treasury), fixedReward);
 
@@ -78,21 +78,21 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
 
     function test_reward_caller() public {
         pinger.ping(alice);
-        assertEq(rai.balanceOf(alice), fixedReward);
+        assertEq(coin.balanceOf(alice), fixedReward);
     }
 
     function test_reward_caller_no_input() public {
         pinger.ping(address(0x0));
-        assertEq(rai.balanceOf(me), fixedReward);
+        assertEq(coin.balanceOf(me), fixedReward);
     }
 
     function test_reward_caller_lower_allowance() public { 
         treasury.setPerBlockAllowance(address(pinger), fixedReward * 10**27 / 2);
         pinger.ping(alice);
-        assertEq(rai.balanceOf(alice), fixedReward / 2);
+        assertEq(coin.balanceOf(alice), fixedReward / 2);
 
         treasury.setTotalAllowance(address(pinger), fixedReward * 10**27 / 3);
         pinger.ping(address(0x0));
-        assertEq(rai.balanceOf(me), fixedReward / 3);
+        assertEq(coin.balanceOf(me), fixedReward / 3);
     }
 }

@@ -65,8 +65,6 @@ contract MockTreasury {
         allowance[account].perBlock = rad;
     }
 
-    event log(uint);
-
     function pullFunds(address dstAccount, address token, uint wad) external accountNotTreasury(dstAccount) {
         require(dstAccount != address(0), "MockTreasury/null-dst");
         require(wad > 0, "MockTreasury/null-transfer-amount");

@@ -34,7 +34,6 @@ contract Pinger is NoSetupIncreasingTreasuryReimbursement {
         maxUpdateCallerReward           = maxUpdateCallerReward_;
         perSecondCallerRewardIncrease   = perSecondCallerRewardIncrease_;
     }
-
 }
 
 contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
@@ -42,7 +41,7 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
 
     Pinger pinger;
     MockTreasury treasury;
-    DSToken rai;
+    DSToken coin;
 
     address alice = address(0x4567);
     address me;
@@ -59,12 +58,12 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
         hevm.warp(startTime);
 
         // Create token
-        rai = new DSToken("RAI", "RAI");
-        rai.mint(initTokenAmount);
+        coin = new DSToken("RAI", "RAI");
+        coin.mint(initTokenAmount);
 
         // Create treasury
-        treasury = new MockTreasury(address(rai));
-        rai.transfer(address(treasury), initTokenAmount);
+        treasury = new MockTreasury(address(coin));
+        coin.transfer(address(treasury), initTokenAmount);
 
         pinger = new Pinger();
         // setting up Pinger // without setup no rewards are given
@@ -136,21 +135,21 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
 
     function test_reward_caller() public {
         pinger.ping(alice, 1 ether);
-        assertEq(rai.balanceOf(alice), 1 ether);
+        assertEq(coin.balanceOf(alice), 1 ether);
     }
 
     function test_reward_caller_no_input() public {
         pinger.ping(address(0x0), 1 ether);
-        assertEq(rai.balanceOf(me), 1 ether);
+        assertEq(coin.balanceOf(me), 1 ether);
     }
 
     function test_reward_caller_lower_allowance() public {
         treasury.setPerBlockAllowance(address(pinger), baseCallerReward * 10**27 / 2);
         pinger.ping(alice, baseCallerReward);
-        assertEq(rai.balanceOf(alice), 0);
+        assertEq(coin.balanceOf(alice), 0);
 
         treasury.setTotalAllowance(address(pinger), baseCallerReward * 10**27 / 3);
         pinger.ping(address(0x0), baseCallerReward);
-        assertEq(rai.balanceOf(me), 0);
+        assertEq(coin.balanceOf(me), 0);
     }
 }
