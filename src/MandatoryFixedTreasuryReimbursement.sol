@@ -98,8 +98,9 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
 
         // Determine the actual fee receiver and reward them
         address finalFeeReceiver = (proposedFeeReceiver == address(0)) ? msg.sender : proposedFeeReceiver;
-        treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), getCallerReward()); 
+        uint256 finalReward      = getCallerReward();
+        treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), finalReward);
 
-        emit RewardCaller(finalFeeReceiver, fixedReward);
+        emit RewardCaller(finalFeeReceiver, finalReward);
     }
 }
