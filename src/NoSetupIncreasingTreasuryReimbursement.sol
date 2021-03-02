@@ -66,7 +66,6 @@ contract NoSetupIncreasingTreasuryReimbursement is GebMath {
         maxRewardIncreaseDelay         = uint(-1);
 
         emit AddAuthorization(msg.sender);
-        emit ModifyParameters("maxRewardIncreaseDelay", maxRewardIncreaseDelay);
     }
 
     // --- Boolean Logic ---

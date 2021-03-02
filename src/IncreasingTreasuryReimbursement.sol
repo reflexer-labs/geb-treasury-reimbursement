@@ -85,7 +85,6 @@ contract IncreasingTreasuryReimbursement is GebMath {
         emit ModifyParameters("baseUpdateCallerReward", baseUpdateCallerReward);
         emit ModifyParameters("maxUpdateCallerReward", maxUpdateCallerReward);
         emit ModifyParameters("perSecondCallerRewardIncrease", perSecondCallerRewardIncrease);
-        emit ModifyParameters("maxRewardIncreaseDelay", maxRewardIncreaseDelay);
     }
 
     // --- Boolean Logic ---
