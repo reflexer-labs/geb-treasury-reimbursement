@@ -5,7 +5,7 @@ import "ds-token/token.sol";
 
 import "./geb/MockTreasury.sol";
 
-import "../IncreasingTreasuryReimbursement.sol";
+import "../reimbursement/IncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
@@ -13,7 +13,7 @@ abstract contract Hevm {
 
 contract Pinger is IncreasingTreasuryReimbursement {
 
-    constructor(address treasury_, uint256 baseUpdateCallerReward_, uint maxUpdateCallerReward_, uint perSecondCallerRewardIncrease_) public 
+    constructor(address treasury_, uint256 baseUpdateCallerReward_, uint maxUpdateCallerReward_, uint perSecondCallerRewardIncrease_) public
     IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_)
     {}
 
@@ -120,7 +120,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
         pinger.modifyParameters(bytes32("maxRewardIncreaseDelay"), 1 hours);
 
         assertEq(pinger.getCallerReward(now - 1 hours - 2, 1), maxCallerReward);
-    } 
+    }
 
     function test_reward_caller() public {
         pinger.ping(alice, 1 ether);
@@ -132,7 +132,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
         assertEq(coin.balanceOf(me), 1 ether);
     }
 
-    function test_reward_caller_lower_allowance() public { 
+    function test_reward_caller_lower_allowance() public {
         treasury.setPerBlockAllowance(address(pinger), baseCallerReward * 10**27 / 2);
         pinger.ping(alice, baseCallerReward);
         assertEq(coin.balanceOf(alice), 0);

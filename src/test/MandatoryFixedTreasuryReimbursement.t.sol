@@ -5,7 +5,7 @@ import "ds-token/token.sol";
 
 import "./geb/MockTreasury.sol";
 
-import "../MandatoryFixedTreasuryReimbursement.sol";
+import "../reimbursement/MandatoryFixedTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
@@ -13,7 +13,7 @@ abstract contract Hevm {
 
 contract Pinger is MandatoryFixedTreasuryReimbursement {
 
-    constructor(address treasury_, uint256 fixedReward_) public 
+    constructor(address treasury_, uint256 fixedReward_) public
     MandatoryFixedTreasuryReimbursement(treasury_, fixedReward_)
     {}
 
@@ -66,7 +66,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
 
     function test_get_caller_reward() public {
         assertEq(pinger.getCallerReward(), fixedReward);
-    }   
+    }
 
     function test_get_caller_lower_allowance() public {
         treasury.setPerBlockAllowance(address(pinger), fixedReward * 10**27 / 2);
@@ -74,7 +74,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
 
         treasury.setTotalAllowance(address(pinger), fixedReward * 10**27 / 3);
         assertEq(pinger.getCallerReward(), fixedReward / 3);
-    }   
+    }
 
     function test_reward_caller() public {
         pinger.ping(alice);
@@ -86,7 +86,7 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
         assertEq(coin.balanceOf(me), fixedReward);
     }
 
-    function test_reward_caller_lower_allowance() public { 
+    function test_reward_caller_lower_allowance() public {
         treasury.setPerBlockAllowance(address(pinger), fixedReward * 10**27 / 2);
         pinger.ping(alice);
         assertEq(coin.balanceOf(alice), fixedReward / 2);

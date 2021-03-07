@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "./math/GebMath.sol";
+import "../math/GebMath.sol";
 
 abstract contract StabilityFeeTreasuryLike {
     function getAllowance(address) virtual external view returns (uint, uint);
@@ -8,7 +8,33 @@ abstract contract StabilityFeeTreasuryLike {
     function pullFunds(address, address, uint) virtual external;
 }
 
-contract NoSetupNoAuthIncreasingTreasuryReimbursement is GebMath {
+contract NoSetupIncreasingTreasuryReimbursement is GebMath {
+    // --- Auth ---
+    mapping (address => uint) public authorizedAccounts;
+    /**
+     * @notice Add auth to an account
+     * @param account Account to add auth to
+     */
+    function addAuthorization(address account) virtual external isAuthorized {
+        authorizedAccounts[account] = 1;
+        emit AddAuthorization(account);
+    }
+    /**
+     * @notice Remove auth from an account
+     * @param account Account to remove auth from
+     */
+    function removeAuthorization(address account) virtual external isAuthorized {
+        authorizedAccounts[account] = 0;
+        emit RemoveAuthorization(account);
+    }
+    /**
+    * @notice Checks whether msg.sender can call an authed function
+    **/
+    modifier isAuthorized {
+        require(authorizedAccounts[msg.sender] == 1, "NoSetupIncreasingTreasuryReimbursement/account-not-authorized");
+        _;
+    }
+
     // --- Variables ---
     // Starting reward for the fee receiver/keeper
     uint256 public baseUpdateCallerReward;          // [wad]
@@ -23,6 +49,8 @@ contract NoSetupNoAuthIncreasingTreasuryReimbursement is GebMath {
     StabilityFeeTreasuryLike  public treasury;
 
     // --- Events ---
+    event AddAuthorization(address account);
+    event RemoveAuthorization(address account);
     event ModifyParameters(
       bytes32 parameter,
       address addr
@@ -34,7 +62,10 @@ contract NoSetupNoAuthIncreasingTreasuryReimbursement is GebMath {
     event FailRewardCaller(bytes revertReason, address feeReceiver, uint256 amount);
 
     constructor() public {
-        maxRewardIncreaseDelay = uint(-1);
+        authorizedAccounts[msg.sender] = 1;
+        maxRewardIncreaseDelay         = uint(-1);
+
+        emit AddAuthorization(msg.sender);
     }
 
     // --- Boolean Logic ---

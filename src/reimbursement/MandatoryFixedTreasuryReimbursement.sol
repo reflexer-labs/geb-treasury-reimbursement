@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "./math/GebMath.sol";
+import "../math/GebMath.sol";
 
 abstract contract StabilityFeeTreasuryLike {
     function getAllowance(address) virtual external view returns (uint, uint);
@@ -37,7 +37,7 @@ contract MandatoryFixedTreasuryReimbursement is GebMath {
 
     // --- Variables ---
     // The fixed reward sent by the treasury to a fee receiver
-    uint256 public fixedReward; // [wad]
+    uint256 public fixedReward;               // [wad]
     // SF treasury
     StabilityFeeTreasuryLike public treasury;
 
