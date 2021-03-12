@@ -59,7 +59,7 @@ contract NoSetupNoAuthIncreasingTreasuryReimbursement is GebMath {
     * @param defaultDelayBetweenCalls Enforced delay between calls to the function for which the treasury reimburses callers
     */
     function getCallerReward(uint256 timeOfLastUpdate, uint256 defaultDelayBetweenCalls) public view returns (uint256) {
-        // If the rewards are null or if the time of the last update is in the future, return 0
+        // If the rewards are null or if the time of the last update is in the future or present, return 0
         bool nullRewards = (baseUpdateCallerReward == 0 && maxUpdateCallerReward == 0);
         if (either(timeOfLastUpdate >= now, nullRewards)) return 0;
 

@@ -87,6 +87,7 @@ contract IncreasingRewardRelayer is IncreasingTreasuryReimbursement {
     * @param feeReceiver Address that will receive the SF reward
     */
     function reimburseCaller(address feeReceiver) external {
+        // Perform checks
         require(refundRequestor == msg.sender, "IncreasingRewardRelayer/invalid-caller");
         require(feeReceiver != address(0), "IncreasingRewardRelayer/null-fee-receiver");
         require(feeReceiver != refundRequestor, "IncreasingRewardRelayer/requestor-cannot-receive-fees");

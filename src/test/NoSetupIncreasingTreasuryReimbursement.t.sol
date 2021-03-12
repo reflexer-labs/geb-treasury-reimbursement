@@ -12,7 +12,6 @@ abstract contract Hevm {
 }
 
 contract Pinger is NoSetupIncreasingTreasuryReimbursement {
-
     function ping(address receiver, uint value) public {
         rewardCaller(receiver, value);
     }
@@ -52,6 +51,7 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
     uint256 initTokenAmount               = 100000000 ether;
     uint256 perSecondCallerRewardIncrease = 1000192559420674483977255848; // 100% over one hour
 
+    uint256 RAY                           = 10 ** 27;
 
     function setUp() public {
         hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -131,7 +131,67 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
         pinger.modifyParameters(bytes32("maxRewardIncreaseDelay"), 1 hours);
 
         assertEq(pinger.getCallerReward(now - 1 hours - 2, 1), maxCallerReward);
-    } 
+    }
+
+    function test_get_caller_reward_both_rewards_max_uint() public {
+        pinger = new Pinger();
+        pinger.setup(address(treasury), uint(-1), uint(-1), perSecondCallerRewardIncrease);
+
+        // Setup treasury allowance
+        treasury.setTotalAllowance(address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+
+        assertEq(pinger.getCallerReward(now - 1, 1), uint(-1) / RAY);
+    }
+
+    function test_get_caller_reward_computed_reward_higher_than_max() public {
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+
+        // Setup treasury allowance
+        treasury.setTotalAllowance(address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+
+        assertEq(pinger.getCallerReward(now - 2 hours, 1), 1 ether + 1);
+    }
+
+    function testFail_get_caller_reward_max_uint_maxRewardIncreaseDelay_huge_delay() public {
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+
+        // Setup treasury allowance
+        treasury.setTotalAllowance(address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+
+        hevm.warp(now + 3650 days);
+        pinger.getCallerReward(now - 365 days, 1 days);
+    }
+
+    function test_reward_caller_receiver_is_treasury() public {
+        assertEq(coin.balanceOf(address(treasury)), initTokenAmount);
+        pinger.ping(address(treasury), 1 ether);
+        assertEq(coin.balanceOf(address(treasury)), initTokenAmount);
+        assertEq(coin.balanceOf(me), 0);
+    }
+
+    function test_reward_caller_null_reward() public {
+        pinger.ping(address(alice), 0);
+        assertEq(coin.balanceOf(alice), 0);
+        assertEq(coin.balanceOf(me), 0);
+    }
+
+    function test_reward_caller_treasury_reverts() public {
+        MockRevertableTreasury revertTreasury = new MockRevertableTreasury();
+        pinger = new Pinger();
+        pinger.setup(address(revertTreasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+
+        // Setup treasury allowance
+        treasury.setTotalAllowance(address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        
+        pinger.ping(alice, baseCallerReward);
+        assertEq(coin.balanceOf(alice), 0);
+    }
 
     function test_reward_caller() public {
         pinger.ping(alice, 1 ether);

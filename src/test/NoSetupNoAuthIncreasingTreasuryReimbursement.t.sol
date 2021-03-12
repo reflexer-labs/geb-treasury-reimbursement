@@ -5,18 +5,13 @@ import "ds-token/token.sol";
 
 import "./geb/MockTreasury.sol";
 
-import "../reimbursement/IncreasingTreasuryReimbursement.sol";
+import "../reimbursement/NoSetupNoAuthIncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract Pinger is IncreasingTreasuryReimbursement {
-
-    constructor(address treasury_, uint256 baseUpdateCallerReward_, uint maxUpdateCallerReward_, uint perSecondCallerRewardIncrease_) public
-    IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_)
-    {}
-
+contract Pinger is NoSetupNoAuthIncreasingTreasuryReimbursement {
     function ping(address receiver, uint value) public {
         rewardCaller(receiver, value);
     }
@@ -27,9 +22,20 @@ contract Pinger is IncreasingTreasuryReimbursement {
         else revert("");
     }
 
+    function setup(
+      address treasury_,
+      uint256 baseUpdateCallerReward_,
+      uint256 maxUpdateCallerReward_,
+      uint256 perSecondCallerRewardIncrease_
+    ) public {
+        treasury                        = StabilityFeeTreasuryLike(treasury_);
+        baseUpdateCallerReward          = baseUpdateCallerReward_;
+        maxUpdateCallerReward           = maxUpdateCallerReward_;
+        perSecondCallerRewardIncrease   = perSecondCallerRewardIncrease_;
+    }
 }
 
-contract IncreasingTreasuryReimbursementTest is DSTest {
+contract NoSetupNoAuthIncreasingTreasuryReimbursementTest is DSTest {
     Hevm hevm;
 
     Pinger pinger;
@@ -59,7 +65,9 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
         treasury = new MockTreasury(address(coin));
         coin.transfer(address(treasury), initTokenAmount);
 
-        pinger = new Pinger(address(treasury), baseCallerReward, maxCallerReward, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        // setting up Pinger // without setup no rewards are given
+        pinger.setup(address(treasury), baseCallerReward, maxCallerReward, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -98,7 +106,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_null_rewards() public {
-        pinger = new Pinger(address(treasury), 0, 0, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 0, 0, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -108,7 +117,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_base_reward_zero() public {
-        pinger = new Pinger(address(treasury), 0, maxCallerReward, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 0, maxCallerReward, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -124,7 +134,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_both_rewards_max_uint() public {
-        pinger = new Pinger(address(treasury), uint(-1), uint(-1), perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(treasury), uint(-1), uint(-1), perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -134,7 +145,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_computed_reward_higher_than_max() public {
-        pinger = new Pinger(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -144,7 +156,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function testFail_get_caller_reward_max_uint_maxRewardIncreaseDelay_huge_delay() public {
-        pinger = new Pinger(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
@@ -169,7 +182,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
 
     function test_reward_caller_treasury_reverts() public {
         MockRevertableTreasury revertTreasury = new MockRevertableTreasury();
-        pinger = new Pinger(address(revertTreasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        pinger = new Pinger();
+        pinger.setup(address(revertTreasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
