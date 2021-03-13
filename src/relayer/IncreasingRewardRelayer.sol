@@ -72,6 +72,7 @@ contract IncreasingRewardRelayer is IncreasingTreasuryReimbursement {
           maxRewardIncreaseDelay = val;
         }
         else if (parameter == "reimburseDelay") {
+          require(val > 0, "IncreasingRewardRelayer/invalid-reimburse-delay");
           reimburseDelay = val;
         }
         else revert("IncreasingRewardRelayer/modify-unrecognized-param");

@@ -12,7 +12,6 @@ abstract contract Hevm {
 }
 
 contract Pinger is IncreasingTreasuryReimbursement {
-
     constructor(address treasury_, uint256 baseUpdateCallerReward_, uint maxUpdateCallerReward_, uint perSecondCallerRewardIncrease_) public
     IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_)
     {}
@@ -26,7 +25,6 @@ contract Pinger is IncreasingTreasuryReimbursement {
             maxRewardIncreaseDelay = value;
         else revert("");
     }
-
 }
 
 contract IncreasingTreasuryReimbursementTest is DSTest {
