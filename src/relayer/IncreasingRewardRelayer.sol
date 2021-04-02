@@ -6,7 +6,7 @@ contract IncreasingRewardRelayer is IncreasingTreasuryReimbursement {
     // --- Variables ---
     // Address that can request funds
     address public refundRequestor;
-    // When the rate has last been relayed
+    // Timestamp of the last reimbursement
     uint256 public lastReimburseTime;       // [timestamp]
     // Enforced gap between reimbursements
     uint256 public reimburseDelay;          // [seconds]
