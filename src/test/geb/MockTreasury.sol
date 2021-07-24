@@ -77,6 +77,63 @@ contract MockTreasury {
     }
 }
 
+contract MultiMockTreasury {
+    SystemCoinLike public coin_;
+
+    // --- Structs ---
+    struct Allowance {
+        uint total;
+        uint perBlock;
+    }
+
+    mapping(address => Allowance) private allowance;
+
+    modifier accountNotTreasury(address account) {
+        require(account != address(this), "MultiMockTreasury/account-cannot-be-treasury");
+        _;
+    }
+
+    constructor(
+        address systemCoin_
+    ) public {
+        coin_  = SystemCoinLike(systemCoin_);
+    }
+
+    // --- Math ---
+    function multiply(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+
+    function systemCoin(bytes32) public view returns (address) {
+        return address(coin_);
+    }
+
+    function getAllowance(bytes32, address account) public view returns (uint256, uint256) {
+        return (allowance[account].total, allowance[account].perBlock);
+    }
+
+    function setTotalAllowance(bytes32, address account, uint rad) external {
+        require(account != address(0), "MultiMockTreasury/null-account");
+        allowance[account].total = rad;
+    }
+
+    function setPerBlockAllowance(bytes32, address account, uint rad) external {
+        require(account != address(0), "MultiMockTreasury/null-account");
+        allowance[account].perBlock = rad;
+    }
+
+    function pullFunds(bytes32, address dstAccount, address token, uint wad) external accountNotTreasury(dstAccount) {
+        require(dstAccount != address(0), "MultiMockTreasury/null-dst");
+        require(wad > 0, "MultiMockTreasury/null-transfer-amount");
+        require(token == address(coin_), "MultiMockTreasury/token-unavailable");
+        require(coin_.balanceOf(address(this)) >= wad, "MultiMockTreasury/not-enough-funds");
+        require(allowance[msg.sender].total >= wad * 10**27, "MultiMockTreasury/not-allowed");
+        require(allowance[msg.sender].perBlock >= wad * 10**27, "MultiMockTreasury/not-allowed");
+        // Transfer money
+        coin_.transfer(dstAccount, wad);
+    }
+}
+
 contract MockRevertableTreasury {
     SystemCoinLike  public systemCoin;
 
@@ -107,6 +164,40 @@ contract MockRevertableTreasury {
     }
 
     function pullFunds(address dstAccount, address token, uint wad) external {
+        revert();
+    }
+}
+
+contract MultiMockRevertableTreasury {
+    // --- Structs ---
+    struct Allowance {
+        uint total;
+        uint perBlock;
+    }
+
+    mapping(address => Allowance) private allowance;
+
+    constructor() public {}
+
+    function systemCoin(bytes32) public view returns (address) {
+        return address(0x1);
+    }
+
+    function getAllowance(bytes32, address account) public view returns (uint256, uint256) {
+        return (allowance[account].total, allowance[account].perBlock);
+    }
+
+    function setTotalAllowance(bytes32, address account, uint rad) external {
+        require(account != address(0), "MockRevertableTreasury/null-account");
+        allowance[account].total = rad;
+    }
+
+    function setPerBlockAllowance(bytes32, address account, uint rad) external {
+        require(account != address(0), "MockRevertableTreasury/null-account");
+        allowance[account].perBlock = rad;
+    }
+
+    function pullFunds(bytes32, address dstAccount, address token, uint wad) external {
         revert();
     }
 }

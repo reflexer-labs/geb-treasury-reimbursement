@@ -3,18 +3,17 @@ pragma solidity >=0.6.7;
 import "ds-test/test.sol";
 import "ds-token/token.sol";
 
-import "./geb/MockTreasury.sol";
+import "../geb/MockTreasury.sol";
 
-import "../reimbursement/single/MandatoryFixedTreasuryReimbursement.sol";
+import "../../reimbursement/multi/MultiMandatoryFixedTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract Pinger is MandatoryFixedTreasuryReimbursement {
-
-    constructor(address treasury_, uint256 fixedReward_) public
-    MandatoryFixedTreasuryReimbursement(treasury_, fixedReward_)
+contract Pinger is MultiMandatoryFixedTreasuryReimbursement {
+    constructor(bytes32 coinName, address treasury_, uint256 fixedReward_) public
+    MultiMandatoryFixedTreasuryReimbursement(coinName, treasury_, fixedReward_)
     {}
 
     function ping(address receiver) public {
@@ -23,11 +22,11 @@ contract Pinger is MandatoryFixedTreasuryReimbursement {
 
 }
 
-contract MandatoryFixedTreasuryReimbursementTest is DSTest {
+contract MultiMandatoryFixedTreasuryReimbursementTest is DSTest {
     Hevm hevm;
 
     Pinger pinger;
-    MockTreasury treasury;
+    MultiMockTreasury treasury;
     DSToken coin;
 
     address alice = address(0x4567);
@@ -36,6 +35,8 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
     uint256 startTime                     = 1577836800;
     uint256 initTokenAmount               = 100000000 ether;
     uint256 fixedReward                   = 5 ether;
+
+    bytes32 coinName                      = "BAI";
 
     function setUp() public {
         hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -46,14 +47,14 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
         coin.mint(initTokenAmount);
 
         // Create treasury
-        treasury = new MockTreasury(address(coin));
+        treasury = new MultiMockTreasury(address(coin));
         coin.transfer(address(treasury), initTokenAmount);
 
-        pinger = new Pinger(address(treasury), fixedReward);
+        pinger = new Pinger(coinName, address(treasury), fixedReward);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         me = address(this);
     }
@@ -69,10 +70,10 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_lower_allowance() public {
-        treasury.setPerBlockAllowance(address(pinger), fixedReward * 10**27 / 2);
+        treasury.setPerBlockAllowance(coinName, address(pinger), fixedReward * 10**27 / 2);
         assertEq(pinger.getCallerReward(), fixedReward / 2);
 
-        treasury.setTotalAllowance(address(pinger), fixedReward * 10**27 / 3);
+        treasury.setTotalAllowance(coinName, address(pinger), fixedReward * 10**27 / 3);
         assertEq(pinger.getCallerReward(), fixedReward / 3);
     }
 
@@ -87,11 +88,11 @@ contract MandatoryFixedTreasuryReimbursementTest is DSTest {
     }
 
     function test_reward_caller_lower_allowance() public {
-        treasury.setPerBlockAllowance(address(pinger), fixedReward * 10**27 / 2);
+        treasury.setPerBlockAllowance(coinName, address(pinger), fixedReward * 10**27 / 2);
         pinger.ping(alice);
         assertEq(coin.balanceOf(alice), fixedReward / 2);
 
-        treasury.setTotalAllowance(address(pinger), fixedReward * 10**27 / 3);
+        treasury.setTotalAllowance(coinName, address(pinger), fixedReward * 10**27 / 3);
         pinger.ping(address(0x0));
         assertEq(coin.balanceOf(me), fixedReward / 3);
     }

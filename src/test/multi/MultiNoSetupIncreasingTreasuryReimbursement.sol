@@ -3,18 +3,16 @@ pragma solidity >=0.6.7;
 import "ds-test/test.sol";
 import "ds-token/token.sol";
 
-import "./geb/MockTreasury.sol";
+import "../geb/MockTreasury.sol";
 
-import "../reimbursement/single/IncreasingTreasuryReimbursement.sol";
+import "../../reimbursement/multi/MultiNoSetupIncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract Pinger is IncreasingTreasuryReimbursement {
-    constructor(address treasury_, uint256 baseUpdateCallerReward_, uint maxUpdateCallerReward_, uint perSecondCallerRewardIncrease_) public
-    IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_)
-    {}
+contract Pinger is MultiNoSetupIncreasingTreasuryReimbursement {
+    constructor(bytes32 coinName_) public MultiNoSetupIncreasingTreasuryReimbursement(coinName_) {}
 
     function ping(address receiver, uint value) public {
         rewardCaller(receiver, value);
@@ -25,13 +23,25 @@ contract Pinger is IncreasingTreasuryReimbursement {
             maxRewardIncreaseDelay = value;
         else revert("");
     }
+
+    function setup(
+      address treasury_,
+      uint256 baseUpdateCallerReward_,
+      uint256 maxUpdateCallerReward_,
+      uint256 perSecondCallerRewardIncrease_
+    ) public {
+        treasury                        = StabilityFeeTreasuryLike(treasury_);
+        baseUpdateCallerReward          = baseUpdateCallerReward_;
+        maxUpdateCallerReward           = maxUpdateCallerReward_;
+        perSecondCallerRewardIncrease   = perSecondCallerRewardIncrease_;
+    }
 }
 
-contract IncreasingTreasuryReimbursementTest is DSTest {
+contract MultiNoSetupIncreasingTreasuryReimbursementTest is DSTest {
     Hevm hevm;
 
     Pinger pinger;
-    MockTreasury treasury;
+    MultiMockTreasury treasury;
     DSToken coin;
 
     address alice = address(0x4567);
@@ -42,6 +52,8 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     uint256 maxCallerReward               = 45 ether;
     uint256 initTokenAmount               = 100000000 ether;
     uint256 perSecondCallerRewardIncrease = 1000192559420674483977255848; // 100% over one hour
+
+    bytes32 coinName                      = "BAI";
 
     uint256 RAY                           = 10 ** 27;
 
@@ -54,14 +66,16 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
         coin.mint(initTokenAmount);
 
         // Create treasury
-        treasury = new MockTreasury(address(coin));
+        treasury = new MultiMockTreasury(address(coin));
         coin.transfer(address(treasury), initTokenAmount);
 
-        pinger = new Pinger(address(treasury), baseCallerReward, maxCallerReward, perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        // setting up Pinger // without setup no rewards are given
+        pinger.setup(address(treasury), baseCallerReward, maxCallerReward, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         me = address(this);
     }
@@ -96,21 +110,23 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_null_rewards() public {
-        pinger = new Pinger(address(treasury), 0, 0, perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        pinger.setup(address(treasury), 0, 0, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         assertEq(pinger.getCallerReward(now - 1, 1), 0);
     }
 
     function test_get_caller_reward_base_reward_zero() public {
-        pinger = new Pinger(address(treasury), 0, maxCallerReward, perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        pinger.setup(address(treasury), 0, maxCallerReward, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         assertEq(pinger.getCallerReward(now - 1, 1), 0);
     }
@@ -122,31 +138,34 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_get_caller_reward_both_rewards_max_uint() public {
-        pinger = new Pinger(address(treasury), uint(-1), uint(-1), perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        pinger.setup(address(treasury), uint(-1), uint(-1), perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         assertEq(pinger.getCallerReward(now - 1, 1), uint(-1) / RAY);
     }
 
     function test_get_caller_reward_computed_reward_higher_than_max() public {
-        pinger = new Pinger(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         assertEq(pinger.getCallerReward(now - 2 hours, 1), 1 ether + 1);
     }
 
     function testFail_get_caller_reward_max_uint_maxRewardIncreaseDelay_huge_delay() public {
-        pinger = new Pinger(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        pinger = new Pinger(coinName);
+        pinger.setup(address(treasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         hevm.warp(now + 3650 days);
         pinger.getCallerReward(now - 365 days, 1 days);
@@ -166,12 +185,13 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_reward_caller_treasury_reverts() public {
-        MockRevertableTreasury revertTreasury = new MockRevertableTreasury();
-        pinger = new Pinger(address(revertTreasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
+        MultiMockRevertableTreasury revertTreasury = new MultiMockRevertableTreasury();
+        pinger = new Pinger(coinName);
+        pinger.setup(address(revertTreasury), 1 ether, 1 ether + 1, perSecondCallerRewardIncrease);
 
         // Setup treasury allowance
-        treasury.setTotalAllowance(address(pinger), uint(-1));
-        treasury.setPerBlockAllowance(address(pinger), uint(-1));
+        treasury.setTotalAllowance(coinName, address(pinger), uint(-1));
+        treasury.setPerBlockAllowance(coinName, address(pinger), uint(-1));
 
         pinger.ping(alice, baseCallerReward);
         assertEq(coin.balanceOf(alice), 0);
@@ -188,11 +208,11 @@ contract IncreasingTreasuryReimbursementTest is DSTest {
     }
 
     function test_reward_caller_lower_allowance() public {
-        treasury.setPerBlockAllowance(address(pinger), baseCallerReward * 10**27 / 2);
+        treasury.setPerBlockAllowance(coinName, address(pinger), baseCallerReward * 10**27 / 2);
         pinger.ping(alice, baseCallerReward);
         assertEq(coin.balanceOf(alice), 0);
 
-        treasury.setTotalAllowance(address(pinger), baseCallerReward * 10**27 / 3);
+        treasury.setTotalAllowance(coinName, address(pinger), baseCallerReward * 10**27 / 3);
         pinger.ping(address(0x0), baseCallerReward);
         assertEq(coin.balanceOf(me), 0);
     }

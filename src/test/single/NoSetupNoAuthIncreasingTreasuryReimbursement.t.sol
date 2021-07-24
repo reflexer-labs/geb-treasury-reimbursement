@@ -3,9 +3,9 @@ pragma solidity >=0.6.7;
 import "ds-test/test.sol";
 import "ds-token/token.sol";
 
-import "./geb/MockTreasury.sol";
+import "../geb/MockTreasury.sol";
 
-import "../reimbursement/single/NoSetupNoAuthIncreasingTreasuryReimbursement.sol";
+import "../../reimbursement/single/NoSetupNoAuthIncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
