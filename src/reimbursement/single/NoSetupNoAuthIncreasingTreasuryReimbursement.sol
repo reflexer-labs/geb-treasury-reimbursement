@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "../math/GebMath.sol";
+import "../../math/GebMath.sol";
 
 abstract contract StabilityFeeTreasuryLike {
     function getAllowance(address) virtual external view returns (uint, uint);
@@ -8,33 +8,7 @@ abstract contract StabilityFeeTreasuryLike {
     function pullFunds(address, address, uint) virtual external;
 }
 
-contract IncreasingTreasuryReimbursement is GebMath {
-    // --- Auth ---
-    mapping (address => uint) public authorizedAccounts;
-    /**
-     * @notice Add auth to an account
-     * @param account Account to add auth to
-     */
-    function addAuthorization(address account) virtual external isAuthorized {
-        authorizedAccounts[account] = 1;
-        emit AddAuthorization(account);
-    }
-    /**
-     * @notice Remove auth from an account
-     * @param account Account to remove auth from
-     */
-    function removeAuthorization(address account) virtual external isAuthorized {
-        authorizedAccounts[account] = 0;
-        emit RemoveAuthorization(account);
-    }
-    /**
-    * @notice Checks whether msg.sender can call an authed function
-    **/
-    modifier isAuthorized {
-        require(authorizedAccounts[msg.sender] == 1, "IncreasingTreasuryReimbursement/account-not-authorized");
-        _;
-    }
-
+contract NoSetupNoAuthIncreasingTreasuryReimbursement is GebMath {
     // --- Variables ---
     // Starting reward for the fee receiver/keeper
     uint256 public baseUpdateCallerReward;          // [wad]
@@ -49,8 +23,6 @@ contract IncreasingTreasuryReimbursement is GebMath {
     StabilityFeeTreasuryLike  public treasury;
 
     // --- Events ---
-    event AddAuthorization(address account);
-    event RemoveAuthorization(address account);
     event ModifyParameters(
       bytes32 parameter,
       address addr
@@ -61,35 +33,16 @@ contract IncreasingTreasuryReimbursement is GebMath {
     );
     event FailRewardCaller(bytes revertReason, address feeReceiver, uint256 amount);
 
-    constructor(
-      address treasury_,
-      uint256 baseUpdateCallerReward_,
-      uint256 maxUpdateCallerReward_,
-      uint256 perSecondCallerRewardIncrease_
-    ) public {
-        if (address(treasury_) != address(0)) {
-          require(StabilityFeeTreasuryLike(treasury_).systemCoin() != address(0), "IncreasingTreasuryReimbursement/treasury-coin-not-set");
-        }
-        require(maxUpdateCallerReward_ >= baseUpdateCallerReward_, "IncreasingTreasuryReimbursement/invalid-max-caller-reward");
-        require(perSecondCallerRewardIncrease_ >= RAY, "IncreasingTreasuryReimbursement/invalid-per-second-reward-increase");
-        authorizedAccounts[msg.sender] = 1;
-
-        treasury                        = StabilityFeeTreasuryLike(treasury_);
-        baseUpdateCallerReward          = baseUpdateCallerReward_;
-        maxUpdateCallerReward           = maxUpdateCallerReward_;
-        perSecondCallerRewardIncrease   = perSecondCallerRewardIncrease_;
-        maxRewardIncreaseDelay          = uint(-1);
-
-        emit AddAuthorization(msg.sender);
-        emit ModifyParameters("treasury", treasury_);
-        emit ModifyParameters("baseUpdateCallerReward", baseUpdateCallerReward);
-        emit ModifyParameters("maxUpdateCallerReward", maxUpdateCallerReward);
-        emit ModifyParameters("perSecondCallerRewardIncrease", perSecondCallerRewardIncrease);
+    constructor() public {
+        maxRewardIncreaseDelay = uint(-1);
     }
 
     // --- Boolean Logic ---
     function either(bool x, bool y) internal pure returns (bool z) {
         assembly{ z := or(x, y)}
+    }
+    function both(bool x, bool y) internal pure returns (bool z) {
+        assembly{ z := and(x, y)}
     }
 
     // --- Treasury ---

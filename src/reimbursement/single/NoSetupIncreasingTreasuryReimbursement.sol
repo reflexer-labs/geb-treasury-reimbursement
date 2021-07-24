@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "../math/GebMath.sol";
+import "../../math/GebMath.sol";
 
 abstract contract StabilityFeeTreasuryLike {
     function getAllowance(address) virtual external view returns (uint, uint);

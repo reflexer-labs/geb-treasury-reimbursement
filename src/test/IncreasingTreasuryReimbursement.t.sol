@@ -5,7 +5,7 @@ import "ds-token/token.sol";
 
 import "./geb/MockTreasury.sol";
 
-import "../reimbursement/IncreasingTreasuryReimbursement.sol";
+import "../reimbursement/single/IncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;

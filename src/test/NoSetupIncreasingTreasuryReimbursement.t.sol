@@ -5,7 +5,7 @@ import "ds-token/token.sol";
 
 import "./geb/MockTreasury.sol";
 
-import "../reimbursement/NoSetupIncreasingTreasuryReimbursement.sol";
+import "../reimbursement/single/NoSetupIncreasingTreasuryReimbursement.sol";
 
 abstract contract Hevm {
     function warp(uint256) virtual public;
@@ -188,7 +188,7 @@ contract NoSetupIncreasingTreasuryReimbursementTest is DSTest {
         // Setup treasury allowance
         treasury.setTotalAllowance(address(pinger), uint(-1));
         treasury.setPerBlockAllowance(address(pinger), uint(-1));
-        
+
         pinger.ping(alice, baseCallerReward);
         assertEq(coin.balanceOf(alice), 0);
     }
